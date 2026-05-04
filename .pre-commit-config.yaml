@@ -10,6 +10,7 @@ repos:
     rev: v1.20.2
     hooks:
       - id: mypy
+        exclude: ^tests/
         additional_dependencies:
           - pydantic-settings
           - aiogram

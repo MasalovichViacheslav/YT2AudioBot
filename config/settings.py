@@ -9,9 +9,12 @@ class Settings(BaseSettings):
     )
 
     bot_token: str = ""
+    allowed_user_id: int = 0
+    webhook_url: str = ""
 
     temp_dir: str = "temp"
     max_file_size_mb: int = 50
+    max_video_duration_sec: int = 10800
 
     @field_validator("bot_token")
     @classmethod

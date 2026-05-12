@@ -8,7 +8,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    bot_token: str = ""
+    bot_token: str
     allowed_user_id: int = 0
     webhook_url: str = ""
 

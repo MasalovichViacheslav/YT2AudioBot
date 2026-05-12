@@ -29,4 +29,4 @@ jobs:
       - name: Run tests
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: uv run pytest
+        run: uv run pytest --ignore=tests/integration

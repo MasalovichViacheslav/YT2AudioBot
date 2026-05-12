@@ -27,4 +27,6 @@ jobs:
         run: uv run mypy .
 
       - name: Run tests
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: uv run pytest

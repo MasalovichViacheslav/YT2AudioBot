@@ -73,6 +73,9 @@ class MetadataService:
     ) -> list[AudioFormat]:
         """Select up to three audio formats closest to target bitrates.
 
+        Prefers m4a streams for broad device compatibility, falls back to mp3,
+        then webm if neither is available.
+
         Args:
             raw_formats: Raw format list from yt-dlp.
             duration_sec: Video duration in seconds, used to estimate file size.
@@ -89,12 +92,22 @@ class MetadataService:
         if not audio_streams:
             return []
 
+        m4a_streams = [f for f in audio_streams if f.get("ext") == "m4a"]
+        mp3_streams = [f for f in audio_streams if f.get("ext") == "mp3"]
+
+        if m4a_streams:
+            selected_streams = m4a_streams
+        elif mp3_streams:
+            selected_streams = mp3_streams
+        else:
+            selected_streams = audio_streams
+
         result: list[AudioFormat] = []
         seen_format_ids: set[str] = set()
 
         for quality, target_kbps in self._QUALITY_TARGETS.items():
             closest = min(
-                audio_streams,
+                selected_streams,
                 key=lambda f: abs(f["abr"] - target_kbps),
             )
 
@@ -111,6 +124,7 @@ class MetadataService:
                     bitrate_kbps=actual_kbps,
                     estimated_size_mb=estimated_size_mb,
                     format_id=closest["format_id"],
+                    container=closest.get("ext", "m4a"),
                 )
             )
 

@@ -10,7 +10,7 @@ dependencies = [
     "loguru>=0.7.3",
     "mutagen>=1.47.0",
     "pydantic-settings>=2.14.0",
-    "yt-dlp>=2026.3.17",
+    "yt-dlp[default]>=2026.3.17",
 ]
 
 [dependency-groups]

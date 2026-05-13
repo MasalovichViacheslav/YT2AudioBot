@@ -5,10 +5,10 @@ from models.video import AudioFormat, VideoMetadata
 from services.metadata import MetadataService, VideoDurationError, VideoUnavailableError
 
 MOCK_FORMATS = [
-    {"vcodec": "none", "abr": 48, "format_id": "249"},
-    {"vcodec": "none", "abr": 128, "format_id": "140"},
-    {"vcodec": "none", "abr": 256, "format_id": "251"},
-    {"vcodec": "av01", "abr": 128, "format_id": "999"},
+    {"vcodec": "none", "abr": 48, "format_id": "249", "ext": "webm"},
+    {"vcodec": "none", "abr": 128, "format_id": "140", "ext": "m4a"},
+    {"vcodec": "none", "abr": 256, "format_id": "251", "ext": "webm"},
+    {"vcodec": "av01", "abr": 128, "format_id": "999", "ext": "mp4"},
 ]
 
 MOCK_INFO = {
@@ -108,3 +108,27 @@ class TestSelectFormats:
         result = service._select_formats(MOCK_FORMATS, duration_sec=300)
 
         assert all(isinstance(f, AudioFormat) for f in result)
+
+    def test_prefers_m4a_over_webm(self, service):
+        result = service._select_formats(MOCK_FORMATS, duration_sec=300)
+        assert all(f.container == "m4a" for f in result)
+
+    def test_falls_back_to_mp3_when_no_m4a(self, service):
+        streams = [
+            {"vcodec": "none", "abr": 128, "format_id": "140", "ext": "mp3"},
+            {"vcodec": "none", "abr": 256, "format_id": "251", "ext": "webm"},
+        ]
+        result = service._select_formats(streams, duration_sec=300)
+        assert all(f.container == "mp3" for f in result)
+
+    def test_falls_back_to_webm_when_no_m4a_or_mp3(self, service):
+        streams = [
+            {"vcodec": "none", "abr": 128, "format_id": "251", "ext": "webm"},
+        ]
+        result = service._select_formats(streams, duration_sec=300)
+        assert all(f.container == "webm" for f in result)
+
+    def test_container_is_set_correctly(self, service):
+        streams = [{"vcodec": "none", "abr": 128, "format_id": "140", "ext": "m4a"}]
+        result = service._select_formats(streams, duration_sec=300)
+        assert result[0].container == "m4a"

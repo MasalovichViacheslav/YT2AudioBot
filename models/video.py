@@ -11,12 +11,14 @@ class AudioFormat:
         estimated_size_mb: Estimated file size in MB
                             (duration_sec * bitrate_kbps / 8 / 1024).
         format_id: Internal yt-dlp stream identifier used for downloading.
+        container: Audio container format (e.g. 'm4a', 'webm').
     """
 
     quality: str
     bitrate_kbps: int
     estimated_size_mb: float
     format_id: str
+    container: str
 
 
 @dataclass

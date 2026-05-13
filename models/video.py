@@ -34,3 +34,25 @@ class VideoMetadata:
     title: str
     duration_sec: int
     formats: list[AudioFormat] = field(default_factory=list)
+
+
+@dataclass
+class ProgressState:
+    """Shared state object for communicating download progress.
+
+    Written by the yt-dlp progress_hook (sync thread),
+    read by the bot's async observer.
+
+    Attributes:
+        percent: Download progress from 0.0 to 100.0.
+        speed: Human-readable download speed (e.g. '1.2 MiB/s').
+        eta_sec: Estimated seconds until download completes.
+        cancelled: Set to True by the bot handler to request cancellation.
+        finished: Set to True by progress_hook when download completes.
+    """
+
+    percent: float = 0.0
+    speed: str = ""
+    eta_sec: int = 0
+    cancelled: bool = False
+    finished: bool = False

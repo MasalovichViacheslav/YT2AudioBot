@@ -29,4 +29,5 @@ jobs:
       - name: Run tests
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          PIXELDRAIN_API_KEY: ${{ secrets.PIXELDRAIN_API_KEY }}
         run: uv run pytest --ignore=tests/integration

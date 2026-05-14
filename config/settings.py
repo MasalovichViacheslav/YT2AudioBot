@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     max_file_size_mb: int = 50
     max_video_duration_sec: int = 10800
 
+    pixeldrain_timeout_sec: int = 60
+    pixeldrain_api_key: str
+
     @field_validator("bot_token")
     @classmethod
     def bot_token_must_not_be_empty(cls, v: str) -> str:

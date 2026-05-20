@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     )
 
     bot_token: str
-    allowed_user_id: int = 0
+    allowed_user_ids: list[int] = []
     webhook_url: str = ""
 
     temp_dir: str = "temp"

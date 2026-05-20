@@ -4,8 +4,9 @@ from aiohttp import web
 from loguru import logger
 
 from bot.middleware import WhitelistMiddleware
-from bot.routers import audio
+from bot.routers import audio, owner
 from config.settings import settings
+from services.invite import InviteService
 
 WEBHOOK_PATH = "/webhook"
 
@@ -32,10 +33,14 @@ def main() -> None:
     bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
 
-    dp.message.middleware(WhitelistMiddleware())
-    dp.callback_query.middleware(WhitelistMiddleware())
+    invite_service = InviteService()
+    dp["invite_service"] = invite_service
+
+    dp.message.middleware(WhitelistMiddleware(invite_service))
+    dp.callback_query.middleware(WhitelistMiddleware(invite_service))
 
     dp.include_router(audio.router)
+    dp.include_router(owner.router)
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)

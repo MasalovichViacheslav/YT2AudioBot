@@ -30,4 +30,6 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           PIXELDRAIN_API_KEY: ${{ secrets.PIXELDRAIN_API_KEY }}
+          OWNER_USER_ID: ${{ secrets.OWNER_USER_ID }}
+          INVITE_TOKEN: ${{ secrets.INVITE_TOKEN }}
         run: uv run pytest --ignore=tests/integration

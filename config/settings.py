@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     )
 
     bot_token: str
+    owner_user_id: int
     allowed_user_ids: list[int] = []
+    invite_token: str
     webhook_url: str = ""
 
     temp_dir: str = "temp"
@@ -24,6 +26,20 @@ class Settings(BaseSettings):
     def bot_token_must_not_be_empty(cls, v: str) -> str:
         if not v:
             raise ValueError("BOT_TOKEN environment variable is not set")
+        return v
+
+    @field_validator("pixeldrain_api_key")
+    @classmethod
+    def pixeldrain_api_key_must_not_be_empty(cls, v: str) -> str:
+        if not v:
+            raise ValueError("PIXELDRAIN_API_KEY environment variable is not set")
+        return v
+
+    @field_validator("invite_token")
+    @classmethod
+    def invite_token_must_not_be_empty(cls, v: str) -> str:
+        if not v:
+            raise ValueError("INVITE_TOKEN environment variable is not set")
         return v
 
 

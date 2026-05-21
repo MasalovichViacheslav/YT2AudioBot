@@ -2,7 +2,7 @@ import pytest
 import yt_dlp
 
 from models.video import AudioFormat, VideoMetadata
-from services.metadata import MetadataService, VideoDurationError, VideoUnavailableError
+from services.metadata import MetadataService, VideoUnavailableError
 
 MOCK_FORMATS = [
     {"vcodec": "none", "abr": 48, "format_id": "249", "ext": "webm"},
@@ -53,14 +53,6 @@ class TestGetMetadata:
         ydl_instance.extract_info.return_value = None
 
         with pytest.raises(VideoUnavailableError):
-            service.get_metadata("https://youtube.com/watch?v=test")
-
-    def test_raises_when_duration_exceeds_limit(self, service, mock_yt_dlp, mocker):
-        mocker.patch("services.metadata.settings.max_video_duration_sec", 100)
-        ydl_instance = mock_yt_dlp.return_value.__enter__.return_value
-        ydl_instance.extract_info.return_value = MOCK_INFO
-
-        with pytest.raises(VideoDurationError):
             service.get_metadata("https://youtube.com/watch?v=test")
 
 

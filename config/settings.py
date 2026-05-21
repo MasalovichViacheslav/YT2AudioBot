@@ -16,7 +16,6 @@ class Settings(BaseSettings):
 
     temp_dir: str = "temp"
     max_file_size_mb: int = 50
-    max_video_duration_sec: int = 10800
 
     pixeldrain_timeout_sec: int = 60
     pixeldrain_api_key: str

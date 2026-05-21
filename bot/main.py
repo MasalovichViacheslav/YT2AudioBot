@@ -1,10 +1,11 @@
 from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from loguru import logger
 
 from bot.middleware import WhitelistMiddleware
-from bot.routers import audio, owner
+from bot.routers import audio, fallback, owner
 from config.settings import settings
 from services.invite import InviteService
 
@@ -31,7 +32,7 @@ async def health(request: web.Request) -> web.Response:
 
 def main() -> None:
     bot = Bot(token=settings.bot_token)
-    dp = Dispatcher()
+    dp = Dispatcher(storage=MemoryStorage())
 
     invite_service = InviteService()
     dp["invite_service"] = invite_service
@@ -41,6 +42,7 @@ def main() -> None:
 
     dp.include_router(audio.router)
     dp.include_router(owner.router)
+    dp.include_router(fallback.router)
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)

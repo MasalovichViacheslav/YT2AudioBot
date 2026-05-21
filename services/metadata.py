@@ -3,16 +3,11 @@ from typing import Any
 import yt_dlp
 from loguru import logger
 
-from config.settings import settings
 from models.video import AudioFormat, VideoMetadata
 
 
 class VideoUnavailableError(Exception):
     """Raised when a video is unavailable, private, or age-restricted."""
-
-
-class VideoDurationError(Exception):
-    """Raised when a video exceeds the maximum allowed duration."""
 
 
 class MetadataService:
@@ -36,7 +31,6 @@ class MetadataService:
         Raises:
             VideoUnavailableError: If the video is unavailable, private,
             or age-restricted.
-            VideoDurationError: If the video exceeds MAX_VIDEO_DURATION_SEC.
         """
         logger.info(f"Fetching metadata for {url}")
 
@@ -56,12 +50,6 @@ class MetadataService:
             raise VideoUnavailableError("No metadata returned for this URL.")
 
         duration: int = info.get("duration", 0)
-        if duration > settings.max_video_duration_sec:
-            raise VideoDurationError(
-                f"Video duration {duration}s exceeds limit "
-                f"{settings.max_video_duration_sec}s."
-            )
-
         title: str = info.get("title", "Unknown")
         formats = self._select_formats(info.get("formats", []), duration)
 

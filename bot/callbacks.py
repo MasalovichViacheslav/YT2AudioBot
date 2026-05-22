@@ -7,3 +7,7 @@ class QualityCallback(CallbackData, prefix="quality"):
 
 class ConfirmCallback(CallbackData, prefix="confirm"):
     confirmed: bool
+
+
+class CancelCallback(CallbackData, prefix="cancel"):
+    pass

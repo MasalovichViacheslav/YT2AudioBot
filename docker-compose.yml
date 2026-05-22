@@ -1,0 +1,10 @@
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./temp:/app/temp
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

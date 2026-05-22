@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.callbacks import ConfirmCallback, QualityCallback
+from bot.callbacks import CancelCallback, ConfirmCallback, QualityCallback
 from models.video import AudioFormat
 
 _QUALITY_LABELS = {
@@ -34,4 +34,14 @@ def build_confirm_keyboard() -> InlineKeyboardMarkup:
         callback_data=ConfirmCallback(confirmed=False),
     )
     builder.adjust(2)
+    return builder.as_markup()
+
+
+def build_cancel_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="❌ Cancel",
+        callback_data=CancelCallback(),
+    )
+    builder.adjust(1)
     return builder.as_markup()

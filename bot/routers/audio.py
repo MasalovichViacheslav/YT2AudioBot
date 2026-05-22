@@ -1,17 +1,30 @@
+import asyncio
 import re
+import shutil
+from pathlib import Path
 
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
+from loguru import logger
 
-from bot.callbacks import ConfirmCallback, QualityCallback
-from bot.keyboards import build_confirm_keyboard, build_quality_keyboard
+from bot.callbacks import CancelCallback, ConfirmCallback, QualityCallback
+from bot.keyboards import (
+    build_cancel_keyboard,
+    build_confirm_keyboard,
+    build_quality_keyboard,
+)
 from bot.states import AudioStates
 from config.settings import settings
-from models.video import AudioFormat, VideoMetadata
+from models.delivery import DeliveryResult
+from models.video import AudioFormat, ProgressState, VideoMetadata
+from services.distributor import DistributorError, DistributorService
+from services.downloader import DownloadCancelledError, DownloadError, DownloaderService
 from services.invite import InviteService
 from services.metadata import MetadataService, VideoUnavailableError
+from services.pixeldrain import PixeldrainUploadError
+from services.tagger import TaggerError, TaggerService
 
 router = Router()
 
@@ -56,6 +69,116 @@ def _build_warning_text(fmt: AudioFormat, max_size_mb: int) -> str | None:
             "Continue?"
         )
     return None
+
+
+async def _progress_watcher(message: Message, progress_state: ProgressState) -> None:
+    while not progress_state.finished and not progress_state.cancelled:
+        await asyncio.sleep(2)
+
+        if progress_state.finished or progress_state.cancelled:
+            break
+
+        filled = int(progress_state.percent / 5)
+        bar = "▓" * filled + "░" * (20 - filled)
+        text = (
+            f"⏳ Downloading...\n\n"
+            f"{bar} {progress_state.percent:.0f}%"
+            f" • {progress_state.speed}"
+            f" • ETA {progress_state.eta_sec}s"
+        )
+
+        try:
+            await message.edit_text(text, reply_markup=build_cancel_keyboard())
+        except Exception:
+            pass
+
+
+async def _deliver(
+    message: Message,
+    progress_msg: Message,
+    delivery: DeliveryResult,
+    title: str,
+) -> None:
+    if delivery.method == "telegram" and delivery.file_path is not None:
+        await progress_msg.delete()
+        await message.answer_audio(
+            audio=FSInputFile(delivery.file_path),
+            title=title,
+        )
+    elif delivery.method == "pixeldrain" and delivery.url is not None:
+        await progress_msg.edit_text(
+            f"✅ Done! File uploaded to Pixeldrain:\n{delivery.url}"
+        )
+
+
+async def _run_download(
+    message: Message,
+    state: FSMContext,
+    url: str,
+    chosen_format: AudioFormat,
+    metadata: VideoMetadata,
+) -> None:
+    progress_state = ProgressState()
+    await state.update_data(progress_state=progress_state)
+
+    progress_msg = await message.answer(
+        "⏳ Downloading...\n\n░░░░░░░░░░░░░░░░░░░░ 0%",
+        reply_markup=build_cancel_keyboard(),
+    )
+
+    watcher_task = asyncio.create_task(_progress_watcher(progress_msg, progress_state))
+
+    session_dir: Path | None = None
+    file_path: Path | None = None
+
+    try:
+        file_path, session_dir = await DownloaderService().download(
+            url, chosen_format, progress_state
+        )
+
+        TaggerService().tag(file_path, metadata.title, url)
+
+        await progress_msg.edit_text("⬆️ Uploading...")
+
+        delivery = await DistributorService().distribute(file_path)
+        await _deliver(message, progress_msg, delivery, metadata.title)
+
+    except DownloadCancelledError:
+        pass
+
+    except DownloadError:
+        await progress_msg.edit_text("❌ Download failed. Please try again.")
+
+    except TaggerError:
+        if file_path is not None:
+            logger.warning("Tagging failed, continuing without tags")
+            await progress_msg.edit_text("⬆️ Uploading...")
+            delivery = await DistributorService().distribute(file_path)
+            await _deliver(message, progress_msg, delivery, metadata.title)
+
+    except PixeldrainUploadError:
+        await progress_msg.edit_text(
+            "❌ Upload to Pixeldrain failed. Please try again."
+        )
+
+    except DistributorError:
+        await progress_msg.edit_text("❌ Something went wrong. Please try again.")
+
+    except Exception:
+        logger.exception("Unexpected error during download")
+        await progress_msg.edit_text("❌ Unexpected error. Please try again.")
+
+    finally:
+        watcher_task.cancel()
+        try:
+            await watcher_task
+        except asyncio.CancelledError:
+            pass
+
+        if session_dir is not None:
+            shutil.rmtree(session_dir, ignore_errors=True)
+
+        await state.clear()
 
 
 @router.message(CommandStart(deep_link=True), flags={"allow_unauthorized": True})
@@ -144,6 +267,7 @@ async def handle_quality_chosen(
 
     data = await state.get_data()
     metadata: VideoMetadata = data["metadata"]
+    url: str = data["url"]
 
     chosen_format = None
     for f in metadata.formats:
@@ -168,8 +292,7 @@ async def handle_quality_chosen(
         )
     else:
         await state.set_state(AudioStates.downloading)
-        await query.message.edit_text("⏳ Downloading...")
-        await state.clear()
+        await _run_download(query.message, state, url, chosen_format, metadata)
 
 
 @router.callback_query(ConfirmCallback.filter(), AudioStates.confirming)
@@ -186,6 +309,26 @@ async def handle_confirm(
         await state.clear()
         return
 
+    data = await state.get_data()
+    url: str = data["url"]
+    chosen_format: AudioFormat = data["chosen_format"]
+    metadata: VideoMetadata = data["metadata"]
+
     await state.set_state(AudioStates.downloading)
-    await query.message.edit_text("⏳ Downloading...")
+    await _run_download(query.message, state, url, chosen_format, metadata)
+
+
+@router.callback_query(CancelCallback.filter(), AudioStates.downloading)
+async def handle_cancel(query: CallbackQuery, state: FSMContext) -> None:
+    await query.answer()
+
+    if not isinstance(query.message, Message):
+        return
+
+    data = await state.get_data()
+    progress_state: ProgressState | None = data.get("progress_state")
+    if progress_state is not None:
+        progress_state.cancelled = True
+
+    await query.message.edit_text("❌ Download cancelled.")
     await state.clear()

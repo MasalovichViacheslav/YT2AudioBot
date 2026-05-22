@@ -1,4 +1,8 @@
-from bot.keyboards import build_confirm_keyboard, build_quality_keyboard
+from bot.keyboards import (
+    build_cancel_keyboard,
+    build_confirm_keyboard,
+    build_quality_keyboard,
+)
 from bot.routers.audio import _build_warning_text, _format_duration, _is_youtube_url
 from models.video import AudioFormat
 
@@ -166,3 +170,15 @@ class TestBuildWarningText:
         assert text is not None
         assert "Pixeldrain" in text
         assert "iOS" in text
+
+
+class TestBuildCancelKeyboard:
+    def test_returns_exactly_one_button(self):
+        keyboard = build_cancel_keyboard()
+        buttons = [btn for row in keyboard.inline_keyboard for btn in row]
+        assert len(buttons) == 1
+
+    def test_button_text_contains_cancel(self):
+        keyboard = build_cancel_keyboard()
+        button = keyboard.inline_keyboard[0][0]
+        assert "Cancel" in button.text

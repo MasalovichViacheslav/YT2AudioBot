@@ -178,11 +178,13 @@ async def _run_download(
         if session_dir is not None:
             shutil.rmtree(session_dir, ignore_errors=True)
 
-        await state.clear()
+        await state.set_state(AudioStates.waiting_for_url)
 
 
 @router.message(CommandStart(deep_link=True), flags={"allow_unauthorized": True})
-async def start_with_token(message: Message, invite_service: InviteService) -> None:
+async def start_with_token(
+    message: Message, state: FSMContext, invite_service: InviteService
+) -> None:
     if message.from_user is None:
         return
 
@@ -205,6 +207,8 @@ async def start_with_token(message: Message, invite_service: InviteService) -> N
         )
         return
 
+    await state.set_state(AudioStates.waiting_for_url)
+
     expires_str = expires_at.strftime("%Y-%m-%d %H:%M UTC")
     await message.answer(
         f"✅ Access granted until {expires_str}.\nSend a YouTube link to get started."
@@ -215,6 +219,12 @@ async def start_with_token(message: Message, invite_service: InviteService) -> N
         f"🔔 New temporary user: @{message.from_user.username} ({user_id})\n"
         f"Access granted until: {expires_str}",
     )
+
+
+@router.message(CommandStart())
+async def start(message: Message, state: FSMContext) -> None:
+    await state.set_state(AudioStates.waiting_for_url)
+    await message.answer("👋 Send a YouTube link and I'll extract the audio for you.")
 
 
 @router.message(AudioStates.waiting_for_url)

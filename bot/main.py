@@ -20,12 +20,6 @@ async def on_startup(bot: Bot) -> None:
         logger.warning("WEBHOOK_URL is not set, skipping webhook registration")
 
 
-async def on_shutdown(bot: Bot) -> None:
-    if settings.webhook_url:
-        await bot.delete_webhook()
-        logger.info("Webhook deleted")
-
-
 async def health(request: web.Request) -> web.Response:
     return web.Response(text="OK")
 
@@ -45,7 +39,6 @@ def main() -> None:
     dp.include_router(fallback.router)
 
     dp.startup.register(on_startup)
-    dp.shutdown.register(on_shutdown)
 
     app = web.Application()
     app.router.add_get("/health", health)

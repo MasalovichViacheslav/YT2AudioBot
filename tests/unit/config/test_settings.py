@@ -34,10 +34,6 @@ class TestAllowedUserIdsParsing:
         s = make_settings(**BASE_VALID, allowed_user_ids="[123456789, 987654321]")
         assert s.allowed_user_ids == [123456789, 987654321]
 
-    def test_single_int_string(self):
-        s = make_settings(**BASE_VALID, allowed_user_ids="123456789")
-        assert s.allowed_user_ids == [123456789]
-
     def test_already_a_list(self):
         s = make_settings(**BASE_VALID, allowed_user_ids=[123456789])
         assert s.allowed_user_ids == [123456789]

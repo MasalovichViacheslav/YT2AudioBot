@@ -1,6 +1,4 @@
-import json
-
-from pydantic import field_validator
+from pydantic import Json, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +10,7 @@ class Settings(BaseSettings):
 
     bot_token: str
     owner_user_id: int
-    allowed_user_ids: list[int] = []
+    allowed_user_ids: Json[list[int]] | list[int] = []
     invite_token: str
     webhook_url: str = ""
 
@@ -21,20 +19,6 @@ class Settings(BaseSettings):
 
     pixeldrain_timeout_sec: int = 60
     pixeldrain_api_key: str
-
-    @field_validator("allowed_user_ids", mode="before")
-    @classmethod
-    def parse_allowed_user_ids(cls, v: object) -> object:
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            stripped = v.strip()
-            if stripped.startswith("["):
-                return json.loads(stripped)
-            return [int(x.strip()) for x in stripped.split(",") if x.strip()]
-        if isinstance(v, int):
-            return [v]
-        return v
 
     @field_validator("bot_token")
     @classmethod

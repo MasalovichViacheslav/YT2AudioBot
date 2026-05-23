@@ -1427,6 +1427,15 @@ wheels = [
 ]
 
 [[package]]
+name = "yt-dlp-invidious"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/ce/34bd4a1d80ec36e4ee8434e67e142f33709a883ab27e949a78b9d341e21b/yt_dlp_invidious-0.1.1.tar.gz", hash = "sha256:dff47ca20ee63067a4b587fc3c1612b171a95cdf56a200ede0d9d8b68fce24a9", size = 9421, upload-time = "2024-10-06T07:17:13.099Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/6f/e37d354a73367d436846c96763b94e0bcd8ecf74fdecd417c10a4e8b20c1/yt_dlp_invidious-0.1.1-py3-none-any.whl", hash = "sha256:2f1559597c3822973396b4ebc98f4f7693cfd5f1d191080b8be77319cd45e077", size = 8195, upload-time = "2024-10-06T07:17:11.925Z" },
+]
+
+[[package]]
 name = "yt2audiobot"
 version = "0.1.0"
 source = { virtual = "." }
@@ -1437,6 +1446,7 @@ dependencies = [
     { name = "mutagen" },
     { name = "pydantic-settings" },
     { name = "yt-dlp", extra = ["default"] },
+    { name = "yt-dlp-invidious" },
 ]
 
 [package.dev-dependencies]
@@ -1457,6 +1467,7 @@ requires-dist = [
     { name = "mutagen", specifier = ">=1.47.0" },
     { name = "pydantic-settings", specifier = ">=2.14.0" },
     { name = "yt-dlp", extras = ["default"], specifier = ">=2026.3.17" },
+    { name = "yt-dlp-invidious" },
 ]
 
 [package.metadata.requires-dev]

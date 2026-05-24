@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     pixeldrain_timeout_sec: int = 60
     pixeldrain_api_key: str
 
+    cookies_file: str | None = None
+
     @field_validator("bot_token")
     @classmethod
     def bot_token_must_not_be_empty(cls, v: str) -> str:

@@ -3,6 +3,7 @@ from typing import Any
 import yt_dlp
 from loguru import logger
 
+from config.settings import settings
 from models.video import AudioFormat, VideoMetadata
 
 
@@ -34,11 +35,14 @@ class MetadataService:
         """
         logger.info(f"Fetching metadata for {url}")
 
-        ydl_opts = {
+        ydl_opts: dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
         }
+
+        if settings.cookies_file:
+            ydl_opts["cookiefile"] = settings.cookies_file
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

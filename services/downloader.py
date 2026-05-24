@@ -48,13 +48,18 @@ class DownloaderService:
             elif d["status"] == "finished":
                 progress_state.finished = True
 
-        return {
+        opts = {
             "format": audio_format.format_id,
             "outtmpl": str(session_dir / "%(title)s.%(ext)s"),
             "quiet": True,
             "no_warnings": True,
             "progress_hooks": [progress_hook],
         }
+
+        if settings.cookies_file:
+            opts["cookiefile"] = settings.cookies_file
+
+        return opts
 
     def _download_sync(
         self,

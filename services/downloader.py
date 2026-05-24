@@ -1,4 +1,5 @@
 import asyncio
+import shutil
 import uuid
 from pathlib import Path
 from typing import Any
@@ -48,7 +49,7 @@ class DownloaderService:
             elif d["status"] == "finished":
                 progress_state.finished = True
 
-        opts = {
+        opts: dict[str, Any] = {
             "format": audio_format.format_id,
             "outtmpl": str(session_dir / "%(title)s.%(ext)s"),
             "quiet": True,
@@ -57,7 +58,10 @@ class DownloaderService:
         }
 
         if settings.cookies_file:
-            opts["cookiefile"] = settings.cookies_file
+            tmp_cookies = Path(settings.temp_dir) / "cookies.txt"
+            if not tmp_cookies.exists():
+                shutil.copy(settings.cookies_file, tmp_cookies)
+            opts["cookiefile"] = str(tmp_cookies)
 
         return opts
 

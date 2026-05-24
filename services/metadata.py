@@ -1,3 +1,5 @@
+import shutil
+from pathlib import Path
 from typing import Any
 
 import yt_dlp
@@ -42,7 +44,10 @@ class MetadataService:
         }
 
         if settings.cookies_file:
-            ydl_opts["cookiefile"] = settings.cookies_file
+            tmp_cookies = Path(settings.temp_dir) / "cookies.txt"
+            if not tmp_cookies.exists():
+                shutil.copy(settings.cookies_file, tmp_cookies)
+            ydl_opts["cookiefile"] = str(tmp_cookies)
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

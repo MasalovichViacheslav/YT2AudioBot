@@ -8,22 +8,14 @@ router = Router()
 
 @router.message(AudioStates.choosing_quality)
 async def fallback_choosing_quality(message: Message) -> None:
-    await message.answer("Please select a quality option from the menu above.")
+    await message.answer("Please select a quality option or press ❌ Cancel.")
 
 
 @router.message(AudioStates.confirming)
 async def fallback_confirming(message: Message) -> None:
-    await message.answer("Please confirm or cancel using the buttons above.")
+    await message.answer("Please confirm or press ❌ Cancel.")
 
 
 @router.message(AudioStates.downloading)
 async def fallback_downloading(message: Message) -> None:
-    await message.answer("⏳ Download in progress. Please wait until it's done.")
-
-
-@router.message()
-async def fallback_no_state(message: Message) -> None:
-    await message.answer(
-        "I'm a bot that extracts audio from YouTube videos — not a chat bot.\n"
-        "Send a YouTube link to get started."
-    )
+    await message.answer("⏳ Download in progress. Please wait or press ❌ Cancel.")

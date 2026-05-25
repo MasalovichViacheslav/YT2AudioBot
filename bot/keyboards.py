@@ -19,6 +19,10 @@ def build_quality_keyboard(formats: list[AudioFormat]) -> InlineKeyboardMarkup:
             text=f"{label} ~{fmt.bitrate_kbps}kbps • ~{fmt.estimated_size_mb} MB",
             callback_data=QualityCallback(format_id=fmt.format_id),
         )
+    builder.button(
+        text="❌ Cancel",
+        callback_data=CancelCallback(),
+    )
     builder.adjust(1)
     return builder.as_markup()
 

@@ -49,15 +49,15 @@ FORMATS_ONE = [
 
 
 class TestBuildQualityKeyboard:
-    def test_three_formats_produce_three_buttons(self):
+    def test_three_formats_produce_four_buttons(self):
         keyboard = build_quality_keyboard(FORMATS_THREE)
         buttons = [btn for row in keyboard.inline_keyboard for btn in row]
-        assert len(buttons) == 3
+        assert len(buttons) == 4
 
-    def test_one_format_produces_one_button(self):
+    def test_one_format_produces_two_buttons(self):
         keyboard = build_quality_keyboard(FORMATS_ONE)
         buttons = [btn for row in keyboard.inline_keyboard for btn in row]
-        assert len(buttons) == 1
+        assert len(buttons) == 2
 
     def test_button_text_contains_bitrate(self):
         keyboard = build_quality_keyboard(FORMATS_ONE)
@@ -71,7 +71,12 @@ class TestBuildQualityKeyboard:
 
     def test_each_button_on_separate_row(self):
         keyboard = build_quality_keyboard(FORMATS_THREE)
-        assert len(keyboard.inline_keyboard) == 3
+        assert len(keyboard.inline_keyboard) == 4
+
+    def test_has_cancel_button(self):
+        keyboard = build_quality_keyboard(FORMATS_THREE)
+        buttons = [btn for row in keyboard.inline_keyboard for btn in row]
+        assert any("Cancel" in btn.text for btn in buttons)
 
 
 class TestBuildConfirmKeyboard:

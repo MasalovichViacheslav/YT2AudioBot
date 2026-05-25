@@ -32,6 +32,8 @@ _YOUTUBE_RE = re.compile(
     r"(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w\-]+"
 )
 
+_READY_MSG = "👋 Send a YouTube link and I'll extract the audio for you."
+
 
 def _is_youtube_url(text: str) -> bool:
     return bool(_YOUTUBE_RE.search(text))
@@ -179,6 +181,7 @@ async def _run_download(
             shutil.rmtree(session_dir, ignore_errors=True)
 
         await state.set_state(AudioStates.waiting_for_url)
+        await message.answer(_READY_MSG)
 
 
 @router.message(CommandStart(deep_link=True), flags={"allow_unauthorized": True})
@@ -210,9 +213,7 @@ async def start_with_token(
     await state.set_state(AudioStates.waiting_for_url)
 
     expires_str = expires_at.strftime("%Y-%m-%d %H:%M UTC")
-    await message.answer(
-        f"✅ Access granted until {expires_str}.\nSend a YouTube link to get started."
-    )
+    await message.answer(f"✅ Access granted until {expires_str}.\n{_READY_MSG}")
 
     await message.bot.send_message(  # type: ignore[union-attr]
         settings.owner_user_id,
@@ -223,8 +224,11 @@ async def start_with_token(
 
 @router.message(CommandStart())
 async def start(message: Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    if current_state not in (None, AudioStates.waiting_for_url):
+        return
     await state.set_state(AudioStates.waiting_for_url)
-    await message.answer("👋 Send a YouTube link and I'll extract the audio for you.")
+    await message.answer(_READY_MSG)
 
 
 @router.message(AudioStates.waiting_for_url)
@@ -289,7 +293,7 @@ async def handle_quality_chosen(
         await query.message.edit_text(
             "❌ Something went wrong. Please send the link again."
         )
-        await state.clear()
+        await state.set_state(AudioStates.waiting_for_url)
         return
 
     await state.update_data(chosen_format=chosen_format)
@@ -305,6 +309,20 @@ async def handle_quality_chosen(
         await _run_download(query.message, state, url, chosen_format, metadata)
 
 
+@router.callback_query(CancelCallback.filter(), AudioStates.choosing_quality)
+async def handle_cancel_choosing_quality(
+    query: CallbackQuery, state: FSMContext
+) -> None:
+    await query.answer()
+
+    if not isinstance(query.message, Message):
+        return
+
+    await query.message.edit_text("❌ Cancelled.")
+    await state.set_state(AudioStates.waiting_for_url)
+    await query.message.answer(_READY_MSG)
+
+
 @router.callback_query(ConfirmCallback.filter(), AudioStates.confirming)
 async def handle_confirm(
     query: CallbackQuery, callback_data: ConfirmCallback, state: FSMContext
@@ -316,7 +334,8 @@ async def handle_confirm(
 
     if not callback_data.confirmed:
         await query.message.edit_text("❌ Cancelled.")
-        await state.clear()
+        await state.set_state(AudioStates.waiting_for_url)
+        await query.message.answer(_READY_MSG)
         return
 
     data = await state.get_data()
@@ -341,4 +360,5 @@ async def handle_cancel(query: CallbackQuery, state: FSMContext) -> None:
         progress_state.cancelled = True
 
     await query.message.edit_text("❌ Download cancelled.")
-    await state.clear()
+    await state.set_state(AudioStates.waiting_for_url)
+    await query.message.answer(_READY_MSG)

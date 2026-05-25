@@ -6,18 +6,34 @@ from loguru import logger
 
 from bot.middleware import WhitelistMiddleware
 from bot.routers import audio, fallback, owner
+from bot.states import AudioStates
 from config.settings import settings
 from services.invite import InviteService
 
 WEBHOOK_PATH = "/webhook"
 
 
-async def on_startup(bot: Bot) -> None:
+async def on_startup(bot: Bot, dispatcher: Dispatcher) -> None:
     if settings.webhook_url:
         await bot.set_webhook(f"{settings.webhook_url}{WEBHOOK_PATH}")
         logger.info(f"Webhook set to {settings.webhook_url}{WEBHOOK_PATH}")
     else:
         logger.warning("WEBHOOK_URL is not set, skipping webhook registration")
+
+    for user_id in settings.allowed_user_ids:
+        try:
+            state = dispatcher.fsm.get_context(
+                bot=bot,
+                chat_id=user_id,
+                user_id=user_id,
+            )
+            await state.set_state(AudioStates.waiting_for_url)
+            await bot.send_message(
+                user_id, "👋 Send a YouTube link and I'll extract the audio for you."
+            )
+            logger.info(f"Initialized state for user {user_id}")
+        except Exception:
+            logger.warning(f"Could not initialize state for user {user_id}")
 
 
 async def health(request: web.Request) -> web.Response:

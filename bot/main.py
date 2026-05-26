@@ -29,7 +29,10 @@ async def on_startup(bot: Bot, dispatcher: Dispatcher) -> None:
             )
             await state.set_state(AudioStates.waiting_for_url)
             await bot.send_message(
-                user_id, "👋 Send a YouTube link and I'll extract the audio for you."
+                user_id,
+                "It seems something went wrong, but I've recovered.🐦‍🔥\n"
+                "This happens sometimes with services if these services are free.\n\n"
+                "👋 Send a YouTube link and I'll extract the audio for you.",
             )
             logger.info(f"Initialized state for user {user_id}")
         except Exception:
@@ -50,8 +53,8 @@ def main() -> None:
     dp.message.middleware(WhitelistMiddleware(invite_service))
     dp.callback_query.middleware(WhitelistMiddleware(invite_service))
 
-    dp.include_router(audio.router)
     dp.include_router(owner.router)
+    dp.include_router(audio.router)
     dp.include_router(fallback.router)
 
     dp.startup.register(on_startup)

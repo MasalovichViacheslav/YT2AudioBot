@@ -93,6 +93,25 @@ class TestBuildYdlOpts:
                 }
             )
 
+    def test_progress_hook_uses_estimate_when_total_bytes_is_none(
+        self, service, tmp_path, progress_state
+    ):
+        opts = service._build_ydl_opts(TEST_FORMAT, tmp_path, progress_state)
+        hook = opts["progress_hooks"][0]
+
+        hook(
+            {
+                "status": "downloading",
+                "downloaded_bytes": 512,
+                "total_bytes": None,
+                "total_bytes_estimate": 1024,
+                "_speed_str": "1.2 MiB/s",
+                "eta": 10,
+            }
+        )
+
+        assert progress_state.percent == 50.0
+
 
 class TestDownloadSync:
     def test_returns_file_path(self, service, tmp_path, progress_state):

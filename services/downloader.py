@@ -40,8 +40,9 @@ class DownloaderService:
                 raise DownloadCancelledError("Download cancelled by user.")
 
             if d["status"] == "downloading":
+                total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
                 progress_state.percent = float(
-                    d.get("downloaded_bytes", 0) / d.get("total_bytes", 1) * 100
+                    d.get("downloaded_bytes", 0) / total * 100
                 )
                 progress_state.speed = d.get("_speed_str", "").strip()
                 progress_state.eta_sec = int(d.get("eta", 0) or 0)

@@ -50,8 +50,8 @@ def main() -> None:
     dp.message.middleware(WhitelistMiddleware(invite_service))
     dp.callback_query.middleware(WhitelistMiddleware(invite_service))
 
-    dp.include_router(audio.router)
     dp.include_router(owner.router)
+    dp.include_router(audio.router)
     dp.include_router(fallback.router)
 
     dp.startup.register(on_startup)

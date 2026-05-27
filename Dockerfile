@@ -30,6 +30,7 @@ COPY --from=builder /app/bot ./bot
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/services ./services
 COPY --from=builder /app/models ./models
+COPY --from=builder /app/utils ./utils
 
 RUN mkdir -p /app/temp
 

@@ -124,3 +124,26 @@ class TestSelectFormats:
         streams = [{"vcodec": "none", "abr": 128, "format_id": "140", "ext": "m4a"}]
         result = service._select_formats(streams, duration_sec=300)
         assert result[0].container == "m4a"
+
+    def test_filters_drc_formats(self, service):
+        streams = [
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "140",
+                "ext": "m4a",
+                "format_note": "",
+            },
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "140-drc",
+                "ext": "m4a",
+                "format_note": "DRC",
+            },
+        ]
+
+        result = service._select_formats(streams, duration_sec=300)
+
+        format_ids = [f.format_id for f in result]
+        assert "140-drc" not in format_ids

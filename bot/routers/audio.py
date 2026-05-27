@@ -76,7 +76,7 @@ def _build_warning_text(fmt: AudioFormat, max_size_mb: int) -> str | None:
 
 async def _progress_watcher(message: Message, progress_state: ProgressState) -> None:
     while not progress_state.finished and not progress_state.cancelled:
-        await asyncio.sleep(2)
+        await asyncio.sleep(settings.progress_bar_interval_sec)
 
         if progress_state.finished or progress_state.cancelled:
             break

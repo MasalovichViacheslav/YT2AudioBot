@@ -7,6 +7,7 @@ from loguru import logger
 
 from config.settings import settings
 from models.video import AudioFormat, VideoMetadata
+from utils.memory import log_memory
 
 
 class VideoUnavailableError(Exception):
@@ -36,6 +37,7 @@ class MetadataService:
             or age-restricted.
         """
         logger.info(f"Fetching metadata for {url}")
+        log_memory("metadata_start")
 
         ydl_opts: dict[str, Any] = {
             "quiet": True,
@@ -55,6 +57,8 @@ class MetadataService:
         except yt_dlp.utils.DownloadError as e:
             raise VideoUnavailableError(str(e)) from e
 
+        log_memory("metadata_after_extract")
+
         if info is None:
             raise VideoUnavailableError("No metadata returned for this URL.")
 
@@ -63,6 +67,7 @@ class MetadataService:
         formats = self._select_formats(info.get("formats", []), duration)
 
         logger.info(f"Metadata fetched: '{title}', {duration}s, {len(formats)} formats")
+        log_memory("metadata_end")
         return VideoMetadata(title=title, duration_sec=duration, formats=formats)
 
     def _select_formats(

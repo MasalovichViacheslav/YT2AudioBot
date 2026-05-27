@@ -26,6 +26,7 @@ from services.invite import InviteService
 from services.metadata import MetadataService, VideoUnavailableError
 from services.pixeldrain import PixeldrainUploadError
 from services.tagger import TaggerError, TaggerService
+from utils.memory import log_memory
 
 router = Router()
 
@@ -123,6 +124,8 @@ async def _run_download(
     chosen_format: AudioFormat,
     metadata: VideoMetadata,
 ) -> None:
+    log_memory("download_start")
+
     progress_state = ProgressState()
     await state.update_data(progress_state=progress_state)
 
@@ -182,6 +185,8 @@ async def _run_download(
 
         if session_dir is not None:
             shutil.rmtree(session_dir, ignore_errors=True)
+
+        log_memory("download_end")
 
         await state.set_state(AudioStates.waiting_for_url)
         await message.answer(_READY_MSG)

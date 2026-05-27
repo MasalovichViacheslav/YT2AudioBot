@@ -50,8 +50,10 @@ class DownloaderService:
             elif d["status"] == "finished":
                 progress_state.finished = True
 
+        fmt = audio_format.format_id
+
         opts: dict[str, Any] = {
-            "format": audio_format.format_id,
+            "format": f"{fmt}[format_note!=DRC]/{fmt}",
             "outtmpl": str(session_dir / "%(title)s.%(ext)s"),
             "quiet": True,
             "no_warnings": True,

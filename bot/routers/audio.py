@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 from aiogram import Router
+from aiogram.exceptions import TelegramRetryAfter
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile, Message
@@ -75,7 +76,7 @@ def _build_warning_text(fmt: AudioFormat, max_size_mb: int) -> str | None:
 
 async def _progress_watcher(message: Message, progress_state: ProgressState) -> None:
     while not progress_state.finished and not progress_state.cancelled:
-        await asyncio.sleep(2)
+        await asyncio.sleep(settings.progress_bar_interval_sec)
 
         if progress_state.finished or progress_state.cancelled:
             break
@@ -91,6 +92,8 @@ async def _progress_watcher(message: Message, progress_state: ProgressState) -> 
 
         try:
             await message.edit_text(text, reply_markup=build_cancel_keyboard())
+        except TelegramRetryAfter as e:
+            await asyncio.sleep(e.retry_after)
         except Exception:
             pass
 

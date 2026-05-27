@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from aiogram.exceptions import TelegramRetryAfter
 
 from bot.routers.audio import _progress_watcher
 from models.video import ProgressState
@@ -60,3 +61,21 @@ class TestProgressWatcher:
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
             await _progress_watcher(progress_msg, progress_state)
+
+    async def test_waits_on_retry_after(self, progress_msg):
+        progress_state = ProgressState(percent=50.0, speed="2.0 MiB/s", eta_sec=10)
+        call_count = 0
+
+        async def retry_then_finish(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise TelegramRetryAfter(retry_after=1)
+            progress_state.finished = True
+
+        progress_msg.edit_text.side_effect = retry_then_finish
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await _progress_watcher(progress_msg, progress_state)
+
+        assert call_count == 2

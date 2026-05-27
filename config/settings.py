@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     cookies_file: str | None = None
 
+    progress_bar_interval_sec: int = 2
+
     @field_validator("bot_token")
     @classmethod
     def bot_token_must_not_be_empty(cls, v: str) -> str:

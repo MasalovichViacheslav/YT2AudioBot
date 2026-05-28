@@ -43,6 +43,7 @@ class MetadataService:
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
+            "cachedir": False,
         }
 
         if settings.cookies_file:

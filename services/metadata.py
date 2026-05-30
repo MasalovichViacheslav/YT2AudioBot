@@ -109,7 +109,7 @@ class MetadataService:
             selected_streams = audio_streams
 
         result: list[AudioFormat] = []
-        seen_format_ids: set[str] = set()
+        seen_bitrates: set[int] = set()
 
         for quality, target_kbps in self._QUALITY_TARGETS.items():
             closest = min(
@@ -117,11 +117,12 @@ class MetadataService:
                 key=lambda f: abs(f["abr"] - target_kbps),
             )
 
-            if closest["format_id"] in seen_format_ids:
+            actual_kbps = int(closest["abr"])
+
+            if actual_kbps in seen_bitrates:
                 continue
 
-            seen_format_ids.add(closest["format_id"])
-            actual_kbps = int(closest["abr"])
+            seen_bitrates.add(actual_kbps)
             estimated_size_mb = round(duration_sec * actual_kbps / 8 / 1024, 1)
 
             result.append(

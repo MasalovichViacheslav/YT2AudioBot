@@ -33,13 +33,38 @@ async def debug_url(message: Message) -> None:
 
     url = parts[1]
     try:
+        import yt_dlp
+
+        with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+
+        raw_formats = info.get("formats", [])
+        audio_streams = [
+            f
+            for f in raw_formats
+            if f.get("vcodec") == "none" and f.get("abr") is not None
+        ]
+
+        lines = [
+            f"title: {info.get('title')}",
+            f"raw audio streams: {len(audio_streams)}",
+            "",
+        ]
+        for s in audio_streams:
+            lines.append(
+                f"format_id={s.get('format_id')} ext={s.get('ext')} "
+                f"abr={s.get('abr')} note={s.get('format_note')!r}"
+            )
+
+        lines.append("")
         metadata = MetadataService().get_metadata(url)
-        lines = [f"title: {metadata.title}", f"duration: {metadata.duration_sec}s", ""]
+        lines.append(f"after _select_formats: {len(metadata.formats)}")
         for fmt in metadata.formats:
             lines.append(
                 f"quality={fmt.quality} bitrate={fmt.bitrate_kbps}kbps "
                 f"size={fmt.estimated_size_mb}MB format_id={fmt.format_id}"
             )
+
         await message.answer("\n".join(lines))
     except Exception as e:
         await message.answer(f"Error: {e}")

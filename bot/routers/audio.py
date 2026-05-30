@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 
 from aiogram import Router
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import AiogramError, TelegramNetworkError, TelegramRetryAfter
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile, Message
@@ -106,15 +106,22 @@ async def _deliver(
     title: str,
 ) -> None:
     if delivery.method == "telegram" and delivery.file_path is not None:
-        await progress_msg.delete()
         await message.answer_audio(
             audio=FSInputFile(delivery.file_path),
             title=title,
         )
+        await progress_msg.delete()
     elif delivery.method == "pixeldrain" and delivery.url is not None:
         await progress_msg.edit_text(
             f"✅ Done! File uploaded to Pixeldrain:\n{delivery.url}"
         )
+
+
+async def _safe_edit(progress_msg: Message, text: str) -> None:
+    try:
+        await progress_msg.edit_text(text)
+    except AiogramError:
+        pass
 
 
 async def _run_download(
@@ -155,26 +162,34 @@ async def _run_download(
         pass
 
     except DownloadError:
-        await progress_msg.edit_text("❌ Download failed. Please try again.")
+        await _safe_edit(progress_msg, "❌ Download failed. Please try again.")
 
     except TaggerError:
         if file_path is not None:
             logger.warning("Tagging failed, continuing without tags")
-            await progress_msg.edit_text("⬆️ Uploading...")
+            await _safe_edit(progress_msg, "⬆️ Uploading...")
             delivery = await DistributorService().distribute(file_path)
             await _deliver(message, progress_msg, delivery, metadata.title)
 
+    except TelegramNetworkError:
+        logger.warning("Telegram network timeout during file upload")
+        await _safe_edit(
+            progress_msg,
+            "❌ Upload timed out — Telegram took too long to respond. "
+            "Please try again.",
+        )
+
     except PixeldrainUploadError:
-        await progress_msg.edit_text(
-            "❌ Upload to Pixeldrain failed. Please try again."
+        await _safe_edit(
+            progress_msg, "❌ Upload to Pixeldrain failed. Please try again."
         )
 
     except DistributorError:
-        await progress_msg.edit_text("❌ Something went wrong. Please try again.")
+        await _safe_edit(progress_msg, "❌ Something went wrong. Please try again.")
 
     except Exception:
         logger.exception("Unexpected error during download")
-        await progress_msg.edit_text("❌ Unexpected error. Please try again.")
+        await _safe_edit(progress_msg, "❌ Unexpected error. Please try again.")
 
     finally:
         watcher_task.cancel()

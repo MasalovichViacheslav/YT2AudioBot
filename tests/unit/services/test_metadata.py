@@ -89,6 +89,25 @@ class TestSelectFormats:
 
         assert len(result) == 1
 
+    def test_deduplicates_by_bitrate_not_format_id(self, service):
+        """Streams with different format_id but same abr should appear only once.
+
+        yt-dlp expands multi-language audio tracks into separate entries with
+        suffixed format_ids (e.g. 140-0, 140-1) when YouTube serves multiple
+        language variants for the same quality level. Without bitrate-based
+        deduplication, both entries pass the format_id check and the user sees
+        duplicate quality options with identical bitrate and file size.
+        """
+        streams = [
+            {"vcodec": "none", "abr": 129, "format_id": "140-0", "ext": "m4a"},
+            {"vcodec": "none", "abr": 129, "format_id": "140-1", "ext": "m4a"},
+        ]
+
+        result = service._select_formats(streams, duration_sec=300)
+
+        assert len(result) == 1
+        assert result[0].bitrate_kbps == 129
+
     def test_estimated_size_is_correct(self, service):
         streams = [{"vcodec": "none", "abr": 128, "format_id": "140"}]
 

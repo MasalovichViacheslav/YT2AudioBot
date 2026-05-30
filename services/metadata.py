@@ -92,6 +92,7 @@ class MetadataService:
             if f.get("vcodec") == "none"
             and f.get("abr") is not None
             and not f.get("format_note", "").startswith("DRC")
+            and not f.get("format_id", "").endswith("-drc")
         ]
 
         if not audio_streams:

@@ -141,9 +141,17 @@ class TestSelectFormats:
                 "ext": "m4a",
                 "format_note": "DRC",
             },
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "141-drc",
+                "ext": "m4a",
+                "format_note": "",
+            },
         ]
 
         result = service._select_formats(streams, duration_sec=300)
 
         format_ids = [f.format_id for f in result]
         assert "140-drc" not in format_ids
+        assert "141-drc" not in format_ids

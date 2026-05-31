@@ -63,6 +63,25 @@ class MetadataService:
         if info is None:
             raise VideoUnavailableError("No metadata returned for this URL.")
 
+        raw_audio = [
+            f
+            for f in info.get("formats", [])
+            if f.get("vcodec") == "none" and f.get("abr") is not None
+        ]
+        logger.debug(
+            "Raw audio streams for {}: {}",
+            url,
+            [
+                {
+                    "format_id": f.get("format_id"),
+                    "ext": f.get("ext"),
+                    "abr": f.get("abr"),
+                    "note": f.get("format_note"),
+                }
+                for f in raw_audio
+            ],
+        )
+
         duration: int = info.get("duration", 0)
         title: str = info.get("title", "Unknown")
         formats = self._select_formats(info.get("formats", []), duration)

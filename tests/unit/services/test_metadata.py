@@ -9,10 +9,28 @@ from services.metadata import (
 )
 
 MOCK_FORMATS = [
-    {"vcodec": "none", "abr": 48, "format_id": "249", "ext": "webm"},
-    {"vcodec": "none", "abr": 128, "format_id": "140", "ext": "m4a"},
-    {"vcodec": "none", "abr": 256, "format_id": "251", "ext": "webm"},
-    {"vcodec": "av01", "abr": 128, "format_id": "999", "ext": "mp4"},
+    {
+        "vcodec": "none",
+        "abr": 48,
+        "format_id": "249",
+        "ext": "webm",
+        "format_note": "low",
+    },
+    {
+        "vcodec": "none",
+        "abr": 128,
+        "format_id": "140",
+        "ext": "m4a",
+        "format_note": "medium",
+    },
+    {
+        "vcodec": "none",
+        "abr": 256,
+        "format_id": "251",
+        "ext": "webm",
+        "format_note": "high",
+    },
+    {"vcodec": "av01", "abr": 128, "format_id": "999", "ext": "mp4", "format_note": ""},
 ]
 
 MOCK_INFO = {
@@ -87,13 +105,6 @@ class TestSelectFormats:
         assert result == []
 
     def test_deduplicates_formats(self, service):
-        """Ensure that when multiple quality targets map to the same stream,
-        it appears only once in the result.
-
-        Example: only one stream at 128kbps is available. All three targets
-        (48, 128, 256 kbps) will pick it as the closest. The result should
-        contain one AudioFormat, not three.
-        """
         single_stream = [{"vcodec": "none", "abr": 128, "format_id": "140"}]
 
         result = service._select_formats(single_stream, duration_sec=300)
@@ -101,17 +112,21 @@ class TestSelectFormats:
         assert len(result) == 1
 
     def test_deduplicates_by_bitrate_not_format_id(self, service):
-        """Streams with different format_id but same abr should appear only once.
-
-        yt-dlp expands multi-language audio tracks into separate entries with
-        suffixed format_ids (e.g. 140-0, 140-1) when YouTube serves multiple
-        language variants for the same quality level. Without bitrate-based
-        deduplication, both entries pass the format_id check and the user sees
-        duplicate quality options with identical bitrate and file size.
-        """
         streams = [
-            {"vcodec": "none", "abr": 129, "format_id": "140-0", "ext": "m4a"},
-            {"vcodec": "none", "abr": 129, "format_id": "140-1", "ext": "m4a"},
+            {
+                "vcodec": "none",
+                "abr": 129,
+                "format_id": "140-0",
+                "ext": "m4a",
+                "format_note": "English (US), medium",
+            },
+            {
+                "vcodec": "none",
+                "abr": 129,
+                "format_id": "140-1",
+                "ext": "m4a",
+                "format_note": "Russian original (default), medium",
+            },
         ]
 
         result = service._select_formats(streams, duration_sec=300)
@@ -162,21 +177,21 @@ class TestSelectFormats:
                 "abr": 128,
                 "format_id": "140",
                 "ext": "m4a",
-                "format_note": "",
+                "format_note": "medium",
             },
             {
                 "vcodec": "none",
                 "abr": 128,
                 "format_id": "140-drc",
                 "ext": "m4a",
-                "format_note": "DRC",
+                "format_note": "medium, DRC",
             },
             {
                 "vcodec": "none",
                 "abr": 128,
                 "format_id": "141-drc",
                 "ext": "m4a",
-                "format_note": "",
+                "format_note": "DRC",
             },
         ]
 
@@ -206,3 +221,94 @@ class TestSelectFormats:
         result = service._select_formats(streams, duration_sec=300)
         assert len(result) == 1
         assert result[0].format_id == "140-1"
+
+    def test_prefers_original_language_over_bitrate_proximity(self, service):
+        streams = [
+            {
+                "vcodec": "none",
+                "abr": 129.581,
+                "format_id": "140-0",
+                "ext": "m4a",
+                "format_note": "English (US), medium",
+            },
+            {
+                "vcodec": "none",
+                "abr": 129.582,
+                "format_id": "140-1",
+                "ext": "m4a",
+                "format_note": "Russian original (default), medium",
+            },
+        ]
+
+        result = service._select_formats(streams, duration_sec=300)
+
+        assert len(result) == 1
+        assert result[0].format_id == "140-1"
+
+    def test_falls_back_to_all_languages_when_no_original(self, service):
+        streams = [
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "140-0",
+                "ext": "m4a",
+                "format_note": "English (US), medium",
+            },
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "140-1",
+                "ext": "m4a",
+                "format_note": "Spanish, medium",
+            },
+        ]
+
+        result = service._select_formats(streams, duration_sec=300)
+
+        assert len(result) == 1
+
+    def test_filters_drc_by_note_field(self, service):
+        streams = [
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "140-0",
+                "ext": "m4a",
+                "note": "English (US), medium",
+            },
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "140-drc",
+                "ext": "m4a",
+                "note": "Russian original (default), medium, DRC",
+            },
+        ]
+
+        result = service._select_formats(streams, duration_sec=300)
+
+        format_ids = [f.format_id for f in result]
+        assert "140-drc" not in format_ids
+
+    def test_filters_storyboard_streams(self, service):
+        streams = [
+            {
+                "vcodec": "none",
+                "abr": 0,
+                "format_id": "sb0",
+                "ext": "mhtml",
+                "format_note": "storyboard",
+            },
+            {
+                "vcodec": "none",
+                "abr": 128,
+                "format_id": "140",
+                "ext": "m4a",
+                "format_note": "medium",
+            },
+        ]
+
+        result = service._select_formats(streams, duration_sec=300)
+
+        format_ids = [f.format_id for f in result]
+        assert "sb0" not in format_ids

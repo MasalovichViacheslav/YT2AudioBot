@@ -33,9 +33,27 @@ async def debug_url(message: Message) -> None:
 
     url = parts[1]
     try:
+        import shutil
+        from pathlib import Path
+        from typing import Any
+
         import yt_dlp
 
-        with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
+        from config.settings import settings
+
+        ydl_opts: dict[str, Any] = {
+            "quiet": True,
+            "skip_download": True,
+            "cachedir": False,
+        }
+
+        if settings.cookies_file:
+            tmp_cookies = Path(settings.temp_dir) / "cookies.txt"
+            if not tmp_cookies.exists():
+                shutil.copy(settings.cookies_file, tmp_cookies)
+            ydl_opts["cookiefile"] = str(tmp_cookies)
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
         raw_formats = info.get("formats", [])
@@ -44,6 +62,9 @@ async def debug_url(message: Message) -> None:
             for f in raw_formats
             if f.get("vcodec") == "none" and f.get("abr") is not None
         ]
+
+        service = MetadataService()
+        selected = service._select_formats(raw_formats, info.get("duration", 0))
 
         lines = [
             f"title: {info.get('title')}",
@@ -57,9 +78,8 @@ async def debug_url(message: Message) -> None:
             )
 
         lines.append("")
-        metadata = MetadataService().get_metadata(url)
-        lines.append(f"after _select_formats: {len(metadata.formats)}")
-        for fmt in metadata.formats:
+        lines.append(f"after _select_formats: {len(selected)}")
+        for fmt in selected:
             lines.append(
                 f"quality={fmt.quality} bitrate={fmt.bitrate_kbps}kbps "
                 f"size={fmt.estimated_size_mb}MB format_id={fmt.format_id}"

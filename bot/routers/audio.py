@@ -213,7 +213,7 @@ async def _run_download(
         await message.answer(_READY_MSG)
 
 
-@router.message(CommandStart(deep_link=True), flags={"allow_unauthorized": True})
+@router.message(CommandStart(deep_link=True))
 async def start_with_token(
     message: Message, state: FSMContext, invite_service: InviteService
 ) -> None:

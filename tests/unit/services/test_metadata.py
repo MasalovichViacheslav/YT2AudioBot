@@ -174,3 +174,24 @@ class TestSelectFormats:
         format_ids = [f.format_id for f in result]
         assert "140-drc" not in format_ids
         assert "141-drc" not in format_ids
+
+    def test_prefers_original_language_track(self, service):
+        streams = [
+            {
+                "vcodec": "none",
+                "abr": 129.474,
+                "format_id": "140-0",
+                "ext": "m4a",
+                "format_note": "English (US), medium",
+            },
+            {
+                "vcodec": "none",
+                "abr": 129.474,
+                "format_id": "140-1",
+                "ext": "m4a",
+                "format_note": "Russian original (default), medium",
+            },
+        ]
+        result = service._select_formats(streams, duration_sec=300)
+        assert len(result) == 1
+        assert result[0].format_id == "140-1"

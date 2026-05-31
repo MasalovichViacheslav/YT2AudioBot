@@ -2,7 +2,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.dispatcher.flags import get_flag
 from aiogram.types import CallbackQuery, Message, TelegramObject
 from loguru import logger
 
@@ -20,7 +19,11 @@ class WhitelistMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        if get_flag(data, "allow_unauthorized"):
+        if (
+            isinstance(event, Message)
+            and event.text
+            and event.text.strip() == f"/start {settings.invite_token}"
+        ):
             return await handler(event, data)
 
         user = None

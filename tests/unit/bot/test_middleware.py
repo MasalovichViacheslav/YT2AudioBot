@@ -27,6 +27,7 @@ def make_message(user_id: int) -> MagicMock:
     message = MagicMock(spec=Message)
     message.from_user = MagicMock()
     message.from_user.id = user_id
+    message.text = None
     return message
 
 
@@ -108,13 +109,31 @@ class TestWhitelistMiddleware:
 
         handler.assert_not_awaited()
 
-    async def test_allows_handler_with_allow_unauthorized_flag(
+    async def test_allows_start_with_invite_token(
         self, middleware: WhitelistMiddleware, handler: AsyncMock
     ) -> None:
         with patch("bot.middleware.settings") as mock_settings:
             mock_settings.allowed_user_ids = []
-            await call_middleware(
-                middleware, handler, user_id=999, flags={"allow_unauthorized": True}
-            )
+            mock_settings.invite_token = "secret"
+            event = make_message(999)
+            event.text = "/start secret"
+            data: dict[str, Any] = {}
+
+            await middleware(handler, event, data)
 
         handler.assert_awaited_once()
+
+    async def test_blocks_start_with_wrong_token(
+        self, middleware: WhitelistMiddleware, handler: AsyncMock
+    ) -> None:
+        with patch("bot.middleware.settings") as mock_settings:
+            mock_settings.allowed_user_ids = []
+            mock_settings.invite_token = "secret"
+            event = make_message(999)
+            event.text = "/start wrongtoken"
+            event.answer = AsyncMock()
+            data: dict[str, Any] = {}
+
+            await middleware(handler, event, data)
+
+        handler.assert_not_awaited()

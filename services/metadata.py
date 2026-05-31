@@ -133,7 +133,10 @@ class MetadataService:
         for quality, target_kbps in self._QUALITY_TARGETS.items():
             closest = min(
                 selected_streams,
-                key=lambda f: abs(f["abr"] - target_kbps),
+                key=lambda f: (
+                    abs(f["abr"] - target_kbps),
+                    0 if "original" in f.get("format_note", "").lower() else 1,
+                ),
             )
 
             actual_kbps = int(closest["abr"])

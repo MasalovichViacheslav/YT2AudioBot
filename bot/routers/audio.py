@@ -23,7 +23,11 @@ from models.video import AudioFormat, ProgressState, VideoMetadata
 from services.distributor import DistributorError, DistributorService
 from services.downloader import DownloadCancelledError, DownloadError, DownloaderService
 from services.invite import InviteService
-from services.metadata import MetadataService, VideoUnavailableError
+from services.metadata import (
+    LiveStreamActiveError,
+    MetadataService,
+    VideoUnavailableError,
+)
 from services.pixeldrain import PixeldrainUploadError
 from services.tagger import TaggerError, TaggerService
 from utils.memory import log_memory
@@ -31,10 +35,12 @@ from utils.memory import log_memory
 router = Router()
 
 _YOUTUBE_RE = re.compile(
-    r"(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w\-]+"
+    r"(https?://)?(www\.)?"
+    r"(youtube\.com/(watch\?v=|live/|shorts/)|youtu\.be/)"
+    r"[\w\-]+"
 )
 
-_READY_MSG = "👋 Send a YouTube link and I'll extract the audio for you."
+_READY_MSG = "🔗 Send a YouTube link and I'll extract the audio for you."
 
 
 def _is_youtube_url(text: str) -> bool:
@@ -279,6 +285,12 @@ async def handle_url(message: Message, state: FSMContext) -> None:
     except VideoUnavailableError:
         await processing_msg.edit_text(
             "❌ Video is unavailable, private, or age-restricted."
+        )
+        return
+
+    except LiveStreamActiveError:
+        await processing_msg.edit_text(
+            "⏳ This stream is still live. Try again after it ends."
         )
         return
 

@@ -122,6 +122,15 @@ class TestIsYoutubeUrl:
     def test_empty_string(self):
         assert not _is_youtube_url("")
 
+    def test_live_url(self):
+        assert _is_youtube_url("https://www.youtube.com/live/dQw4w9WgXcQ")
+
+    def test_shorts_url(self):
+        assert _is_youtube_url("https://www.youtube.com/shorts/dQw4w9WgXcQ")
+
+    def test_live_url_without_protocol(self):
+        assert _is_youtube_url("youtube.com/live/dQw4w9WgXcQ")
+
 
 class TestFormatDuration:
     def test_seconds_only(self):

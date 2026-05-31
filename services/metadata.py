@@ -27,6 +27,10 @@ class MetadataService:
         "high": 256,
     }
 
+    @staticmethod
+    def _get_note(f: dict[str, Any]) -> str:
+        return (f.get("format_note") or f.get("note") or "").lower()
+
     def get_metadata(self, url: str) -> VideoMetadata:
         """Fetch video metadata for a given YouTube URL.
 
@@ -101,24 +105,13 @@ class MetadataService:
     def _select_formats(
         self, raw_formats: list[dict[str, Any]], duration_sec: int
     ) -> list[AudioFormat]:
-        """Select up to three audio formats closest to target bitrates.
-
-        Prefers m4a streams for broad device compatibility, falls back to mp3,
-        then webm if neither is available.
-
-        Args:
-            raw_formats: Raw format list from yt-dlp.
-            duration_sec: Video duration in seconds, used to estimate file size.
-
-        Returns:
-            List of AudioFormat, 1 to 3 entries, ordered from lowest to highest quality.
-        """
         audio_streams = [
             f
             for f in raw_formats
             if f.get("vcodec") == "none"
             and f.get("abr") is not None
-            and not f.get("format_note", "").startswith("DRC")
+            and (f.get("abr") or 0) > 0
+            and "drc" not in self._get_note(f)
             and not f.get("format_id", "").endswith("-drc")
         ]
 
@@ -135,16 +128,18 @@ class MetadataService:
         else:
             selected_streams = audio_streams
 
+        original_streams = [
+            f for f in selected_streams if "original" in self._get_note(f)
+        ]
+        language_streams = original_streams if original_streams else selected_streams
+
         result: list[AudioFormat] = []
         seen_bitrates: set[int] = set()
 
         for quality, target_kbps in self._QUALITY_TARGETS.items():
             closest = min(
-                selected_streams,
-                key=lambda f: (
-                    abs(f["abr"] - target_kbps),
-                    0 if "original" in f.get("format_note", "").lower() else 1,
-                ),
+                language_streams,
+                key=lambda f: abs(f["abr"] - target_kbps),
             )
 
             actual_kbps = int(closest["abr"])

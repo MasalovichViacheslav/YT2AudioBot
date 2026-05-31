@@ -14,6 +14,10 @@ class VideoUnavailableError(Exception):
     """Raised when a video is unavailable, private, or age-restricted."""
 
 
+class LiveStreamActiveError(Exception):
+    """Raised when the video is a currently active live stream."""
+
+
 class MetadataService:
     """Fetches video metadata from YouTube without downloading."""
 
@@ -35,6 +39,7 @@ class MetadataService:
         Raises:
             VideoUnavailableError: If the video is unavailable, private,
             or age-restricted.
+            LiveStreamActiveError: If the video is a currently active live stream.
         """
         logger.info(f"Fetching metadata for {url}")
         log_memory("metadata_start")
@@ -62,6 +67,9 @@ class MetadataService:
 
         if info is None:
             raise VideoUnavailableError("No metadata returned for this URL.")
+
+        if info.get("is_live"):
+            raise LiveStreamActiveError("Video is an active live stream.")
 
         raw_audio = [
             f

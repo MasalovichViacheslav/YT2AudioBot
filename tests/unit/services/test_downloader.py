@@ -42,7 +42,7 @@ class TestBuildYdlOpts:
     def test_ydl_opts_structure(self, service, tmp_path, progress_state):
         opts = service._build_ydl_opts(TEST_FORMAT, tmp_path, progress_state)
 
-        assert opts["format"] == "140[format_note*=original]/140[format_note!=DRC]/140"
+        assert opts["format"] == "140"
         assert str(tmp_path) in opts["outtmpl"]
         assert opts["quiet"] is True
         assert opts["no_warnings"] is True

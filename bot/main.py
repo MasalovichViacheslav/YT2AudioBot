@@ -3,6 +3,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from loguru import logger
+from yt_dlp.version import __version__ as ytdlp_version
 
 from bot.middleware import WhitelistMiddleware
 from bot.routers import audio, fallback, owner
@@ -14,6 +15,7 @@ WEBHOOK_PATH = "/webhook"
 
 
 async def on_startup(bot: Bot, dispatcher: Dispatcher) -> None:
+    logger.info(f"yt-dlp version: {ytdlp_version}")
     if settings.webhook_url:
         await bot.set_webhook(f"{settings.webhook_url}{WEBHOOK_PATH}")
         logger.info(f"Webhook set to {settings.webhook_url}{WEBHOOK_PATH}")

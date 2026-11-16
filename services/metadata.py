@@ -1,4 +1,5 @@
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,7 @@ from loguru import logger
 from config.settings import settings
 from models.video import AudioFormat, VideoMetadata
 from utils.memory import log_memory
+from utils.ytdlp_logging import YtDlpLogger
 
 
 class VideoUnavailableError(Exception):
@@ -49,10 +51,9 @@ class MetadataService:
         log_memory("metadata_start")
 
         ydl_opts: dict[str, Any] = {
-            "quiet": True,
-            "no_warnings": True,
             "skip_download": True,
             "cachedir": False,
+            "logger": YtDlpLogger(),
         }
 
         if settings.cookies_file:
@@ -61,12 +62,19 @@ class MetadataService:
                 shutil.copy(settings.cookies_file, tmp_cookies)
             ydl_opts["cookiefile"] = str(tmp_cookies)
 
+        started = time.monotonic()
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
         except yt_dlp.utils.DownloadError as e:
+            logger.error(
+                "extract_info failed after {:.1f}s: {}",
+                time.monotonic() - started,
+                e,
+            )
             raise VideoUnavailableError(str(e)) from e
 
+        elapsed = time.monotonic() - started
         log_memory("metadata_after_extract")
 
         if info is None:
@@ -75,9 +83,32 @@ class MetadataService:
         if info.get("is_live"):
             raise LiveStreamActiveError("Video is an active live stream.")
 
+        all_formats = info.get("formats", [])
+        n_storyboard = sum(1 for f in all_formats if f.get("ext") == "mhtml")
+        n_audio = sum(
+            1
+            for f in all_formats
+            if f.get("vcodec") == "none" and (f.get("abr") or 0) > 0
+        )
+        n_video = sum(
+            1
+            for f in all_formats
+            if f.get("vcodec") not in (None, "none") and f.get("ext") != "mhtml"
+        )
+        logger.info(
+            "Extract finished in {:.1f}s: total={} audio={} video={} storyboard={}",
+            elapsed,
+            len(all_formats),
+            n_audio,
+            n_video,
+            n_storyboard,
+        )
+        if n_audio == 0:
+            logger.warning("No real audio streams returned for {}", url)
+
         raw_audio = [
             f
-            for f in info.get("formats", [])
+            for f in all_formats
             if f.get("vcodec") == "none" and f.get("abr") is not None
         ]
         logger.debug(
@@ -96,7 +127,7 @@ class MetadataService:
 
         duration: int = info.get("duration", 0)
         title: str = info.get("title", "Unknown")
-        formats = self._select_formats(info.get("formats", []), duration)
+        formats = self._select_formats(all_formats, duration)
 
         logger.info(f"Metadata fetched: '{title}', {duration}s, {len(formats)} formats")
         log_memory("metadata_end")

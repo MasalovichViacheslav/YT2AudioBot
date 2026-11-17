@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -10,12 +12,14 @@ from bot.routers import audio, fallback, owner
 from bot.states import AudioStates
 from config.settings import settings
 from services.invite import InviteService
+from utils.network import get_egress_ip
 
 WEBHOOK_PATH = "/webhook"
 
 
 async def on_startup(bot: Bot, dispatcher: Dispatcher) -> None:
     logger.info(f"yt-dlp version: {ytdlp_version}")
+    logger.info(f"Egress IP at startup: {await asyncio.to_thread(get_egress_ip)}")
     if settings.webhook_url:
         await bot.set_webhook(f"{settings.webhook_url}{WEBHOOK_PATH}")
         logger.info(f"Webhook set to {settings.webhook_url}{WEBHOOK_PATH}")

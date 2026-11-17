@@ -9,6 +9,7 @@ from loguru import logger
 from config.settings import settings
 from models.video import AudioFormat, VideoMetadata
 from utils.memory import log_memory
+from utils.network import get_egress_ip
 from utils.ytdlp_logging import YtDlpLogger
 
 
@@ -68,13 +69,17 @@ class MetadataService:
                 info = ydl.extract_info(url, download=False)
         except yt_dlp.utils.DownloadError as e:
             logger.error(
-                "extract_info failed after {:.1f}s: {}",
+                "extract_info failed after {:.1f}s (egress IP: {}): {}",
                 time.monotonic() - started,
+                get_egress_ip(),
                 e,
             )
             raise VideoUnavailableError(str(e)) from e
 
         elapsed = time.monotonic() - started
+        # Egress IP is resolved right after extraction so it is as close
+        # as possible to the address yt-dlp used for its requests.
+        egress_ip = get_egress_ip()
         log_memory("metadata_after_extract")
 
         if info is None:
@@ -96,12 +101,14 @@ class MetadataService:
             if f.get("vcodec") not in (None, "none") and f.get("ext") != "mhtml"
         )
         logger.info(
-            "Extract finished in {:.1f}s: total={} audio={} video={} storyboard={}",
+            "Extract finished in {:.1f}s: total={} audio={} video={} "
+            "storyboard={} ip={}",
             elapsed,
             len(all_formats),
             n_audio,
             n_video,
             n_storyboard,
+            egress_ip,
         )
         if n_audio == 0:
             logger.warning("No real audio streams returned for {}", url)
